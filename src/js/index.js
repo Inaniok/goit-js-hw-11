@@ -1,98 +1,126 @@
-import { fetchImages } from '../js/fetchImages';
-import Notiflix from 'notiflix';
-import SimpleLightbox from 'simplelightbox';
-import 'simplelightbox/dist/simple-lightbox.min.css';
+import Notiflix from "notiflix";
+import SimpleLightbox from "simplelightbox";
+import "simplelightbox/dist/simple-lightbox.min.css";
+import { getImg } from "./api";
+import { renderMarkup } from "./renderMarkup";
+import throttle from "lodash.throttle";
 
-const input = document.querySelector('.search-form-input');
-const btnSearch = document.querySelector('.search-form-button');
+const form = document.getElementById('search-form');
 const gallery = document.querySelector('.gallery');
-const btnLoadMore = document.querySelector('.load-more');
-let gallerySimpleLightbox = new SimpleLightbox('.gallery a');
+const loadBtn = document.querySelector('.load-more');
 
-// const { height: cardHeight } = document
-//   .querySelector('.gallery')
-//   .firstElementChild.getBoundingClientRect();
+form.addEventListener('submit', onSearchImg);
+loadBtn.addEventListener('click', onLoadMoreBtn);
 
-// window.scrollBy({
-//   top: cardHeight * 2,
+let page = 1;
+let querySearch = '';
+const per_page = 40;
 
-//   behavior: 'smooth',
-// });
-
-btnLoadMore.style.display = 'none';
-
-let pageNumber = 1;
-
-btnSearch.addEventListener('click', e => {
+async function onSearchImg(e) {
+   
   e.preventDefault();
-  cleanGallery();
-  const trimmedValue = input.value.trim();
-  if (trimmedValue !== '') {
-    fetchImages(trimmedValue, pageNumber).then(foundData => {
-      if (foundData.hits.length === 0) {
-        Notiflix.Notify.failure(
-          'Sorry, there are no images matching your search query. Please try again.'
-        );
-      } else {
-        renderImageList(foundData.hits);
-        Notiflix.Notify.success(
-          `Hooray! We found ${foundData.totalHits} images.`
-        );
-        btnLoadMore.style.display = 'block';
-        gallerySimpleLightbox.refresh();
-      }
-    });
+  querySearch = form.elements.searchQuery.value.trim();
+  page = 1;
+  clearMarkup();
+ 
+  if (!querySearch) {
+    Notiflix.Notify.failure('Please, fill search field');
+    clearMarkup();
+    addHidden();
+    return;
   }
-});
-
-btnLoadMore.addEventListener('click', () => {
-  pageNumber++;
-  const trimmedValue = input.value.trim();
-  btnLoadMore.style.display = 'none';
-  fetchImages(trimmedValue, pageNumber).then(foundData => {
-    if (foundData.hits.length === 0) {
-      Notiflix.Notify.failure(
-        'Sorry, there are no images matching your search query. Please try again.'
-      );
-    } else {
-      renderImageList(foundData.hits);
-      Notiflix.Notify.success(
-        `Hooray! We found ${foundData.totalHits} images.`
-      );
-      btnLoadMore.style.display = 'block';
+  
+  try {
+    const res = await getImg(querySearch, page);
+    console.log(res);
+   let totalPage = res.data.totalHits;
+    if (totalPage === 0) {
+      Notiflix.Notify.failure('Sorry, there are no images matching your search query. Please try again.');
+      clearMarkup();
+      return;
     }
-  });
-});
+     
+    renderMarkup(res.data.hits);
+    Notiflix.Notify.success(`Hooray! We found ${totalPage} images.`);
+    onSimpleLightBox();
+    addVisible();
+  } catch (error) {
+    console.log(error);
+  }
 
-function renderImageList(images) {
-  console.log(images, 'images');
-  const markup = images
-    .map(image => {
-      console.log('img', image);
-      return `<div class="photo-card">
-       <a href="${image.largeImageURL}"><img class="photo" src="${image.webformatURL}" alt="${image.tags}" title="${image.tags}" loading="lazy"/></a>
-        <div class="info">
-           <p class="info-item">
-    <b>Likes</b> <span class="info-item-api"> ${image.likes} </span>
-</p>
-            <p class="info-item">
-                <b>Views</b> <span class="info-item-api">${image.views}</span>  
-            </p>
-            <p class="info-item">
-                <b>Comments</b> <span class="info-item-api">${image.comments}</span>  
-            </p>
-            <p class="info-item">
-                <b>Downloads</b> <span class="info-item-api">${image.downloads}</span> 
-            </p>
-        </div>
-    </div>`;
-    })
-    .join('');
-  gallery.innerHTML += markup;
 }
 
-function cleanGallery() {
-  gallery.innerHTML = '';
-  pageNumber = 1;
-  btnLoadMore.style.display = 'none';
+
+ 
+
+async function onLoadMoreBtn(e) {
+  page += 1;
+   let querySearch = form.elements.searchQuery.value.trim();
+  try {
+   
+    const res = await getImg(querySearch, page);
+    renderMarkup(res.data.hits);
+    // console.log(res);
+    onSimpleLightBox();
+    addVisible();
+    const count = res.data.totalHits / per_page;
+    if (page > count) {
+      Notiflix.Notify.info('Were sorry, but you ve reached the end of search results.');
+      addHidden();
+      form.reset();
+    }
+
+  }
+  catch (error) {
+    console.log(error)
+  }
+  
 }
+
+
+function clearMarkup() {
+  gallery.innerHTML = "";
+}
+function addHidden() { 
+  loadBtn.classList.remove('visible')
+  loadBtn.classList.add('hidden')
+
+}
+function addVisible() { 
+  loadBtn.classList.remove('hidden')
+  loadBtn.classList.add('visible')
+}
+
+function onSimpleLightBox() {
+  new SimpleLightbox('.gallery a', {
+        captionDelay: 250,
+        captionsData: 'alt',
+      }).refresh();
+}
+ 
+
+
+// безкінечний скрол
+
+// window.addEventListener('scroll', throttle(onInfititeScroll, 500))
+
+// async function onInfititeScroll ()
+// { 
+//   const docHeight = document.documentElement.getBoundingClientRect();
+//   const viewHeight = document.documentElement.clientHeight;
+//   if (docHeight.bottom < viewHeight + 150) {
+//     page += 1;
+//     let querySearch = form.elements.searchQuery.value.trim();
+//     const res = await getImg(querySearch,page);
+//     renderMarkup(res.data.hits);
+//     const count = res.data.totalHits - per_page * page;
+//     if (count < 0) {
+//     Notiflix.Notify.info('Were sorry, but you ve reached the end of search results.')
+//     window.removeEventListener('scroll', throttle(onInfititeScroll, 500))
+      
+//      return;
+
+// }
+//   }
+
+//   }

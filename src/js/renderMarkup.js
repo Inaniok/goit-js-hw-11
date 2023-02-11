@@ -6,7 +6,7 @@ export function renderMarkup(pictures) {
    <div class="gallery-item">
    <a class="gallery__link" href="${largeImageURL}">
    <div class = "item">
-    <img  src="${webformatURL}" alt="${tags}" loading="lazy" width = "200"/>
+    <img  src="${webformatURL}" alt="${tags}" loading="lazy" width = "300"/>
     </div></a> 
     <div class="info">
         <p class="info-item"><span>${likes}</span>

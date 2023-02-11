@@ -47,12 +47,7 @@ async function onSearchImg(e) {
   } catch (error) {
     console.log(error);
   }
-
 }
-
-
- 
-
 async function onLoadMoreBtn(e) {
   page += 1;
    let querySearch = form.elements.searchQuery.value.trim();
@@ -69,14 +64,11 @@ async function onLoadMoreBtn(e) {
       addHidden();
       form.reset();
     }
-
   }
   catch (error) {
     console.log(error)
   }
-  
-}
-
+  }
 
 function clearMarkup() {
   gallery.innerHTML = "";
